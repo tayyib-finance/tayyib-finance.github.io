@@ -14,7 +14,10 @@
   h1 { font-size:22px; color:#1a3a2a; margin-bottom:4px; }
   .sub { color:#888; font-size:13px; margin-bottom:22px; }
   label { display:block; font-weight:600; font-size:14px; color:#333; margin:16px 0 6px; }
-  .val { float:right; color:#1a7a4a; }
+  .num { width:100%; padding:12px 14px; font-size:18px; font-weight:600;
+    border:1.5px solid #cfe0d6; border-radius:12px; color:#1a3a2a;
+    margin-bottom:8px; outline:none; }
+  .num:focus { border-color:#1a7a4a; }
   input[type=range] { width:100%; accent-color:#1a7a4a; }
   .result { background:#f2f8f4; border-radius:16px; padding:18px; margin-top:22px; }
   .row { display:flex; justify-content:space-between; padding:7px 0;
@@ -29,7 +32,7 @@
   .admin { display:none; background:#fff7e6; border:2px dashed #e0a800;
     border-radius:14px; padding:14px; margin-top:18px; }
   .admin label { margin-top:0; color:#8a6d00; }
-  .admin input[type=number] { width:100%; padding:10px; font-size:16px;
+  .admin input { width:100%; padding:10px; font-size:16px;
     border:1px solid #e0a800; border-radius:10px; }
   .admin .tag { font-size:11px; color:#b08900; margin-top:6px; }
 </style>
@@ -39,14 +42,17 @@
   <h1>Калькулятор рассрочки</h1>
   <div class="sub">Честная рассрочка без процентов и штрафов</div>
 
-  <label>Стоимость товара <span class="val" id="pv">100 000 ₽</span></label>
-  <input type="range" id="price" min="5000" max="500000" step="5000" value="100000">
+  <label>Стоимость товара, ₽</label>
+  <input type="number" class="num" id="priceN" value="100000" min="0" inputmode="numeric">
+  <input type="range" id="priceR" min="5000" max="500000" step="5000" value="100000">
 
-  <label>Первый взнос <span class="val" id="dv">10 000 ₽</span></label>
-  <input type="range" id="down" min="0" max="490000" step="5000" value="10000">
+  <label>Первый взнос, ₽</label>
+  <input type="number" class="num" id="downN" value="10000" min="0" inputmode="numeric">
+  <input type="range" id="downR" min="0" max="495000" step="5000" value="10000">
 
-  <label>Срок договора <span class="val" id="tv">5 мес.</span></label>
-  <input type="range" id="term" min="1" max="12" step="1" value="5">
+  <label>Срок договора, мес.</label>
+  <input type="number" class="num" id="termN" value="5" min="1" max="12" inputmode="numeric">
+  <input type="range" id="termR" min="1" max="12" step="1" value="5">
 
   <div class="admin" id="adminBox">
     <label>⚙️ Наценка, % в месяц (видно только вам)</label>
@@ -65,15 +71,15 @@
 </div>
 
 <script>
-  var CLIENT_RATE = 5;              // процент для клиентов
-  var PHONE = "79887836677";        // ваш WhatsApp
+  var CLIENT_RATE = 5;
+  var PHONE = "79887836677";
 
   var isAdmin = (location.hash === "#admin");
   if (isAdmin) document.getElementById('adminBox').style.display = "block";
 
-  var price = document.getElementById('price');
-  var down  = document.getElementById('down');
-  var term  = document.getElementById('term');
+  var priceN = document.getElementById('priceN'), priceR = document.getElementById('priceR');
+  var downN  = document.getElementById('downN'),  downR  = document.getElementById('downR');
+  var termN  = document.getElementById('termN'),  termR  = document.getElementById('termR');
   var rateInput = document.getElementById('rate');
 
   function fmt(n){ return n.toLocaleString('ru-RU') + ' \u20BD'; }
@@ -88,16 +94,21 @@
   }
 
   function calc(){
-    if (+down.value > +price.value - 5000) down.value = +price.value - 5000;
-    var p = +price.value, d = +down.value, t = +term.value;
+    var p = parseInt(priceN.value) || 0;
+    var d = parseInt(downN.value) || 0;
+    var t = parseInt(termN.value) || 1;
+
+    if (t < 1) t = 1;
+    if (t > 12) t = 12;
+    if (d > p) { d = p; downN.value = d; }
+
+    priceR.value = p; downR.value = d; termR.value = t;
+
     var fin = p - d;
     var markup = Math.round(fin * getRate() * t);
     var total = p + markup;
-    var monthly = Math.round((fin + markup) / t);
+    var monthly = t > 0 ? Math.round((fin + markup) / t) : 0;
 
-    document.getElementById('pv').textContent = fmt(p);
-    document.getElementById('dv').textContent = fmt(d);
-    document.getElementById('tv').textContent = t + ' мес.';
     document.getElementById('monthly').textContent = fmt(monthly);
     document.getElementById('markup').textContent = fmt(markup);
     document.getElementById('total').textContent = fmt(total);
@@ -112,10 +123,17 @@
       "https://wa.me/" + PHONE + "?text=" + encodeURIComponent(msg);
   }
 
-  price.oninput = calc;
-  down.oninput = calc;
-  term.oninput = calc;
+  // ползунок -> поле
+  priceR.oninput = function(){ priceN.value = priceR.value; calc(); };
+  downR.oninput  = function(){ downN.value  = downR.value;  calc(); };
+  termR.oninput  = function(){ termN.value  = termR.value;  calc(); };
+
+  // поле -> ползунок
+  priceN.oninput = calc;
+  downN.oninput = calc;
+  termN.oninput = calc;
   rateInput.oninput = calc;
+
   calc();
 </script>
 </body>
