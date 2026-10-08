@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tayyib Finance — Калькулятор рассрочки</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:linear-gradient(135deg,#1a3a2a,#0d1f16); min-height:100vh;
+    display:flex; justify-content:center; align-items:center; padding:15px; }
+  .container { background:#fff; border-radius:22px; max-width:480px; width:100%;
+    padding:28px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+  h1 { font-size:22px; color:#1a3a2a; margin-bottom:4px; }
+  .sub { color:#888; font-size:13px; margin-bottom:22px; }
+  label { display:block; font-weight:600; font-size:14px; color:#333; margin:16px 0 6px; }
+  .val { float:right; color:#1a7a4a; }
+  input[type=range] { width:100%; accent-color:#1a7a4a; }
+  .result { background:#f2f8f4; border-radius:16px; padding:18px; margin-top:22px; }
+  .row { display:flex; justify-content:space-between; padding:7px 0;
+    border-bottom:1px solid #e0eae4; font-size:14px; color:#555; }
+  .row:last-child { border:none; }
+  .row b { color:#1a3a2a; font-size:15px; }
+  .pay { font-size:26px; font-weight:800; color:#1a7a4a; }
+  .btn { display:block; text-align:center; background:#25D366; color:#fff;
+    text-decoration:none; font-weight:700; padding:14px; border-radius:14px;
+    margin-top:16px; font-size:16px; }
+  .note { font-size:11px; color:#999; margin-top:12px; text-align:center; }
+  .admin { display:none; background:#fff7e6; border:2px dashed #e0a800;
+    border-radius:14px; padding:14px; margin-top:18px; }
+  .admin label { margin-top:0; color:#8a6d00; }
+  .admin input[type=number] { width:100%; padding:10px; font-size:16px;
+    border:1px solid #e0a800; border-radius:10px; }
+  .admin .tag { font-size:11px; color:#b08900; margin-top:6px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Калькулятор рассрочки</h1>
+  <div class="sub">Честная рассрочка без процентов и штрафов</div>
+
+  <label>Стоимость товара <span class="val" id="pv">100 000 ₽</span></label>
+  <input type="range" id="price" min="5000" max="500000" step="5000" value="100000">
+
+  <label>Первый взнос <span class="val" id="dv">10 000 ₽</span></label>
+  <input type="range" id="down" min="0" max="490000" step="5000" value="10000">
+
+  <label>Срок договора <span class="val" id="tv">5 мес.</span></label>
+  <input type="range" id="term" min="1" max="12" step="1" value="5">
+
+  <div class="admin" id="adminBox">
+    <label>⚙️ Наценка, % в месяц (видно только вам)</label>
+    <input type="number" id="rate" value="5" min="0" max="20" step="0.1">
+    <div class="tag">Клиенты по обычной ссылке всегда видят 5%</div>
+  </div>
+
+  <div class="result">
+    <div class="row"><span>Ежемесячный платёж</span><span class="pay" id="monthly">—</span></div>
+    <div class="row"><span>Наценка</span><b id="markup">—</b></div>
+    <div class="row"><span>Общая стоимость</span><b id="total">—</b></div>
+  </div>
+
+  <a class="btn" id="wa" href="#" target="_blank">📲 Отправить заявку в WhatsApp</a>
+  <div class="note">Цена фиксируется в договоре и не меняется. Без скрытых платежей.</div>
+</div>
+
+<script>
+  var CLIENT_RATE = 5;              // процент для клиентов
+  var PHONE = "79887836677";        // ваш WhatsApp
+
+  var isAdmin = (location.hash === "#admin");
+  if (isAdmin) document.getElementById('adminBox').style.display = "block";
+
+  var price = document.getElementById('price');
+  var down  = document.getElementById('down');
+  var term  = document.getElementById('term');
+  var rateInput = document.getElementById('rate');
+
+  function fmt(n){ return n.toLocaleString('ru-RU') + ' \u20BD'; }
+
+  function getRate(){
+    if (isAdmin) {
+      var r = parseFloat(rateInput.value);
+      if (isNaN(r) || r < 0) r = CLIENT_RATE;
+      return r / 100;
+    }
+    return CLIENT_RATE / 100;
+  }
+
+  function calc(){
+    if (+down.value > +price.value - 5000) down.value = +price.value - 5000;
+    var p = +price.value, d = +down.value, t = +term.value;
+    var fin = p - d;
+    var markup = Math.round(fin * getRate() * t);
+    var total = p + markup;
+    var monthly = Math.round((fin + markup) / t);
+
+    document.getElementById('pv').textContent = fmt(p);
+    document.getElementById('dv').textContent = fmt(d);
+    document.getElementById('tv').textContent = t + ' мес.';
+    document.getElementById('monthly').textContent = fmt(monthly);
+    document.getElementById('markup').textContent = fmt(markup);
+    document.getElementById('total').textContent = fmt(total);
+
+    var msg = "Ассаляму алейкум! Хочу оформить рассрочку:\n" +
+      "Товар: " + fmt(p) + "\n" +
+      "Первый взнос: " + fmt(d) + "\n" +
+      "Срок: " + t + " мес.\n" +
+      "Платёж: " + fmt(monthly) + "/мес.\n" +
+      "Общая стоимость: " + fmt(total);
+    document.getElementById('wa').href =
+      "https://wa.me/" + PHONE + "?text=" + encodeURIComponent(msg);
+  }
+
+  price.oninput = calc;
+  down.oninput = calc;
+  term.oninput = calc;
+  rateInput.oninput = calc;
+  calc();
+</script>
+</body>
+</html>
